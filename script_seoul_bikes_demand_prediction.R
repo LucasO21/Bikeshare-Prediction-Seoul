@@ -321,40 +321,41 @@ write_rds(cubist_tune_results_1, file = "02-Models/cubist_tune_results_1.rds")
 # * 4.4: Training Results Metrics Comparison ----
 
 # Function To Get Model Model Metrics
-func_get_best_metric <- function(metric){
+func_get_best_metric <- function(model, model_name){
     
     bind_rows(
-        ranger_tune_results_1 %>% show_best(metric, 1) %>% mutate(model = "ranger"),
-        xgboost_tune_results_1 %>% show_best(metric, 1) %>% mutate(model = "xgboost"),
-        cubist_tune_results_1 %>% show_best(metric, 1) %>% mutate(model = "cubist")
+        model %>% show_best("mae", 1),
+        model %>% show_best("rmse", 1),
+        model %>% show_best("rsq", 1) 
     ) %>% 
-        select(model, mean) %>% 
         mutate(mean = round(mean, 2)) %>% 
-        rename({{metric}} := mean)
+        select(.metric, mean) %>% 
+        spread(key = .metric, value = mean) %>% 
+        mutate(model := {{model_name}}) %>% 
+        select(model, everything(.))
 }
 
-mae_round_1 <- func_get_best_metric(metric = "mae")
-rmse_round_1 <- func_get_best_metric(metric = "rmse")
-rsq_round_1 <- func_get_best_metric(metric = "rsq")
+ranger_metrics_1 <- func_get_best_metric(ranger_tune_results_1, "Random Forest")
+xgboost_metrics_1 <- func_get_best_metric(xgboost_tune_results_1, "XGBOOST")
+cubist_metrics_1 <- func_get_best_metric(cubist_tune_results_1, "Cubist")
 
 # Training Set Metrics Table
-training_metrics <- bind_cols(
-    mae_round_1,
-    rmse_round_1 %>% select(rmse),
-    rsq_round_1 %>% select(rsq)
+training_metrics_1 <- bind_rows(
+    ranger_metrics_1,
+    xgboost_metrics_1,
+    cubist_metrics_1
 ) %>% 
     arrange(rmse) %>% 
     datatable(
         class = "cell-border stripe",
-        caption = "Training Set Metrics",
+        caption = "Training Set Metrics Round 1",
         options = list(
             dom = "t"
         )
         
     )
 
-# Save Training Metrics
-training_metrics %>% write_rds("03-Plots/training_metrics_table.rds")
+training_metrics_1
 
 
 # 5.0: Hyper-Parameter Tuning Round 2 ----
@@ -392,14 +393,14 @@ xgboost_tune_results_2 <- tune_grid(
 )
 toc()
 
-# Xgboost Round 2 Results
+# * 5.1: Xgboost Round 2 Results ----
 xgboost_tune_results_2 %>% show_best("rmse", n = 5)
 
 # Save Model For Future Use
 write_rds(xgboost_tune_results_2, file = "02-Models/xgboost_tune_results_2.rds")
 
 
-# * Cubist Tuning Round 2 ----
+# * 5.2: Cubist Tuning Round 2 ----
 
 # Visualize Cubist Tuning Params
 p <- cubist_tune_results_1 %>% 
@@ -438,10 +439,31 @@ cubist_tune_results_2 %>% show_best("mae", n = 5)
 write_rds(cubist_tune_results_2, file = "02-Models/cubist_tune_results_2rds")
 
 
-
 # Loading Saved Models
 # xgboost_tune_results_2 <- read_rds("02-Models/xgboost_tune_results_2.rds")
 # cubist_tune_results_2 <- read_rds("02-Models/cubist_tune_results_2rds")
+
+# * 5.3 Training Results Metrics Comparison Round 2 ----
+xgboost_metrics_2 <- func_get_best_metric(xgboost_tune_results_2, "XGBOOST")
+cubist_metrics_2 <- func_get_best_metric(cubist_tune_results_2, "Cubist")
+
+# Training Set Metrics Table
+training_metrics_2 <- bind_rows(
+    xgboost_metrics_2,
+    cubist_metrics_2,
+) %>% 
+    arrange(rmse) %>% 
+    datatable(
+        class = "cell-border stripe",
+        caption = "Training Set Metrics Round 2",
+        options = list(
+            dom = "t"
+        )
+        
+    )
+
+training_metrics_2
+
 
 
 

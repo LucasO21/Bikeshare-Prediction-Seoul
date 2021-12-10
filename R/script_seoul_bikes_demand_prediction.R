@@ -507,7 +507,7 @@ xgboost_test_metrics <- collect_metrics(xgboost_last_fit) %>%
             mae(rented_count, .pred) 
     ) %>% 
     select(-.estimator) %>% 
-    mutate(model = "xgboost") %>% 
+    mutate(model = "XGBOOST") %>% 
     arrange(.estimate)
 
 # Final Fit (Test) Set Metrics Set (Cubist)
@@ -519,7 +519,7 @@ cubist_test_metrics <- collect_metrics(cubist_last_fit) %>%
             mae(rented_count, .pred) 
     ) %>% 
     select(-.estimator) %>% 
-    mutate(model = "cubist") %>% 
+    mutate(model = "Cubist") %>% 
     arrange(.estimate)
 
 # Final Fit (Test) Set Metrics Table
@@ -527,6 +527,7 @@ test_set_metrics <- bind_rows(
     xgboost_test_metrics,
     cubist_test_metrics
 ) %>% 
+    mutate(.estimate = round(.estimate, 2)) %>% 
     spread(key = .metric, value = .estimate) %>% 
     arrange(mae) %>% 
     datatable(

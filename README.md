@@ -8,4 +8,4 @@ A machine learning project to predict hourly bike rentals in Seoul. The goal of 
 
 * Models Explored: Random Forest, XGBOOST, Cubist.
 
-* Tools Used: R programming language.
+* Tools/Packages Used: R, Tidymodels.

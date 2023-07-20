@@ -1,8 +1,11 @@
 # SEOUL BIKE SHARING DEMAND PREDICTION ----
-
+# ANALYSIS & MODELING SCRIPT ----
 # Data Source: # "https://archive.ics.uci.edu/ml/machine-learning-databases/00560/SeoulBikeData.csv"
+# **** ----
 
+# ******************************************************************************
 # 1.0: Setup ----
+# ******************************************************************************
 
 # * Set Working Directory ----
 setwd(here::here("scripts"))
@@ -40,7 +43,10 @@ dim(seoul_bikes_raw_tbl)
 seoul_bikes_raw_tbl %>% sapply(function(x)sum(is.na(x)))
 
 
+# ******************************************************************************
+# **** ----
 # 2.0: Exploratory Data Analysis ----
+# ******************************************************************************
 
 # * Function ----
 get_ggplot_custom_theme <- function() {
@@ -196,8 +202,10 @@ seoul_bikes_tbl %>%
     facet_wrap(~ key, scales = "free")
     
     
-
+# ******************************************************************************
+# **** ----
 # 3.0: Modeling ----
+# ******************************************************************************
 
 # * 3.1: Data Splitting ----
 set.seed(100)
@@ -214,28 +222,50 @@ resamples_obj <- vfold_cv(seoul_bikes_tbl, v = 10)
 # * 3.3: Recipes ----
 
 # Random Forest Recipe Spec
-ranger_recipe <- recipe(rented_count ~ ., data = train_tbl) %>% 
-    step_rm(date, functional_day) %>% 
+recipe_spec_ranger <- recipe(rented_count ~ ., data = train_tbl) %>% 
+    step_mutate(am_pm = ifelse(hour < 12, "am", "pm")) %>% 
+    timetk::step_timeseries_signature(date) %>% 
+    step_rm(
+        matches("(.xts)|(.iso)|(date_hour)|(minute)|(second)"),
+        day_of_week, month, date_index.num, functional_day, date
+    ) %>% 
     step_zv(all_predictors())
 
+recipe_spec_ranger %>% prep() %>% juice() %>% glimpse()
+
+
 # Xgboost Recipe Spec
-xgboost_recipe <- recipe(formula = rented_count ~ ., data = seoul_bikes_tbl) %>% 
-    step_rm(date, functional_day) %>% 
+recipe_spec_xgboost <- recipe(formula = rented_count ~ ., data = seoul_bikes_tbl) %>% 
+    step_mutate(am_pm = ifelse(hour < 12, "am", "pm")) %>% 
+    timetk::step_timeseries_signature(date) %>% 
+    step_rm(
+        matches("(.xts)|(.iso)|(date_hour)|(minute)|(second)"),
+        day_of_week, month, date_index.num, functional_day, date
+    ) %>% 
     step_novel(all_nominal(), -all_outcomes()) %>% 
     step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE) %>% 
     step_zv(all_predictors())
 
+recipe_spec_xgboost %>% prep() %>% juice() %>% glimpse()
+
+
 # Cubist Recipe Spec
-cubist_recipe <- recipe(formula = rented_count ~ ., data = seoul_bikes_tbl) %>% 
-    step_rm(date, functional_day) %>% 
-    step_zv(all_predictors()) %>% 
-    prep()
+recipe_spec_cubist <- recipe(formula = rented_count ~ ., data = seoul_bikes_tbl) %>% 
+    step_mutate(am_pm = ifelse(hour < 12, "am", "pm")) %>% 
+    timetk::step_timeseries_signature(date) %>% 
+    step_rm(
+        matches("(.xts)|(.iso)|(date_hour)|(minute)|(second)"),
+        day_of_week, month, date_index.num, functional_day, date
+    ) %>% 
+    step_zv(all_predictors())
+
+recipe_spec_cubist %>% prep() %>% juice() %>% glimpse()
 
 
 # * 3.4: Model Specs ----
 
 # Random Forest Model Spec
-ranger_spec <- rand_forest(
+model_spec_ranger <- rand_forest(
     mtry  = tune(),
     min_n = tune(),
     trees = 1000
@@ -244,7 +274,7 @@ ranger_spec <- rand_forest(
     set_engine("ranger") 
 
 # Xgboost Model Spec
-xgboost_spec <-boost_tree(
+model_spec_xgboost <-boost_tree(
     trees          = tune(),
     min_n          = tune(),
     tree_depth     = tune(),
@@ -256,7 +286,7 @@ xgboost_spec <-boost_tree(
     set_engine("xgboost") 
 
 # Cubist Model Spec
-cubist_spec <- cubist_rules(
+model_spec_cubist <- cubist_rules(
     committees = tune(), 
     neighbors  = tune()
 ) %>%
@@ -266,22 +296,22 @@ cubist_spec <- cubist_rules(
 # * 3.1: Workflows ----
 
 # Random Forest Workflow
-ranger_workflow <- 
+wflw_ranger <- 
     workflow() %>% 
-    add_recipe(ranger_recipe) %>% 
-    add_model(ranger_spec) 
+    add_recipe(recipe_spec_ranger) %>% 
+    add_model(model_spec_ranger) 
 
 # Xgboost Workflow
-xgboost_workflow <- 
+wflw_xgboost <- 
     workflow() %>% 
-    add_recipe(xgboost_recipe) %>% 
-    add_model(xgboost_spec) 
+    add_recipe(recipe_spec_xgboost) %>% 
+    add_model(model_spec_xgboost) 
 
 # Cubist Workflow
-cubist_workflow <- 
+wflw_cubist <- 
     workflow() %>% 
-    add_recipe(cubist_recipe) %>% 
-    add_model(cubist_spec) 
+    add_recipe(recipe_spec_cubist) %>% 
+    add_model(model_spec_cubist) 
 
 
 # 4.0: Hyper-Parameter Tuning Round 1 ----

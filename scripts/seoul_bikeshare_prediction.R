@@ -323,13 +323,13 @@ plan(strategy = cluster, workers = makeCluster(n_cores))
 
 # * 4.2: Random Forest Tuning ----
 tic()
-set.seed(456)
-ranger_tune_results_1 <- tune_grid(
-    object    = ranger_workflow, 
+set.seed(123)
+tune_results_ranger_1 <- tune_grid(
+    object    = wflw_ranger, 
     resamples = resamples_obj,
     grid      = grid_latin_hypercube(
-                        parameters(ranger_spec) %>% 
-                            update(mtry = mtry(range = c(1, 14))),
+                        parameters(model_spec_ranger) %>% 
+                            update(mtry = mtry(range = c(1, 30))),
                         size = 15),
     control   = control_grid(save_pred = TRUE, verbose = FALSE, allow_par = TRUE),
     metrics   = metric_set(mae, rmse, rsq)
@@ -337,19 +337,19 @@ ranger_tune_results_1 <- tune_grid(
 toc()
 
 # Random Forest Round 1 Results
-ranger_tune_results_1 %>% show_best("mae", n = 5)
+tune_results_ranger_1 %>% show_best("mae", n = 5)
 
 # Save Model For Future Use
-write_rds(ranger_tune_results_1, file = "02-Models/ranger_tune_results_1.rds")
+write_rds(tune_results_ranger_1, file = "../artifacts/tune_results_ranger_1.rds")
 
 
 # * 4.3: Xgboost Tuning Round 1----
 tic()
 set.seed(456)
-xgboost_tune_results_1 <- tune_grid(
-    object    = xgboost_workflow, 
+tune_results_xgboost_1 <- tune_grid(
+    object    = wflw_xgboost, 
     resamples = resamples_obj,
-    grid      = grid_latin_hypercube(parameters(xgboost_spec),
+    grid      = grid_latin_hypercube(parameters(model_spec_xgboost),
                                      size = 15),
     control   = control_grid(save_pred = TRUE, verbose = FALSE, allow_par = TRUE),
     metrics   = metric_set(mae, rmse, rsq)
@@ -357,19 +357,19 @@ xgboost_tune_results_1 <- tune_grid(
 toc()
 
 # Xgboost Round 1 Results
-xgboost_tune_results_1 %>% show_best("rmse", n = 5)
+tune_results_xgboost_1 %>% show_best("rmse", n = 5)
 
 # Save Model For Future Use
-write_rds(xgboost_tune_results_1, file = "02-Models/xgboost_tune_results_1.rds")
+write_rds(tune_results_xgboost_1, file = "../artifacts/tune_results_xgboost_1.rds")
 
 
 # * 4.3: Cubist Tuning Round 1 ----
 tic()
 set.seed(456)
-cubist_tune_results_1 <- tune_grid(
-    object    = cubist_workflow, 
+tune_results_cubist_1 <- tune_grid(
+    object    = wflw_cubist, 
     resamples = resamples_obj,
-    grid      = grid_latin_hypercube(parameters(cubist_spec),
+    grid      = grid_latin_hypercube(parameters(model_spec_cubist),
                                      size = 15),
     control   = control_grid(save_pred = TRUE, verbose = FALSE, allow_par = TRUE),
     metrics   = metric_set(mae, rmse, rsq)
@@ -378,10 +378,10 @@ toc()
 
 
 # Cubist Round 1 Results
-cubist_tune_results_1 %>% show_best("rmse", n = 5)
+tune_results_cubist_1 %>% show_best("rmse", n = 5)
 
 # Save Model For Future Use
-write_rds(cubist_tune_results_1, file = "02-Models/cubist_tune_results_1.rds")
+write_rds(tune_results_cubist_1, file = "../artifacts/tune_results_cubist_1.rds")
 
 # Loading Saved Models
 # ranger_tune_results_1 <- read_rds("02-Models/ranger_tune_results_1.rds")

@@ -4,9 +4,13 @@
 
 # 1.0: Setup ----
 
+# * Set Working Directory ----
+setwd(here::here("scripts"))
+
 # * Libraries ----
 library(tidyverse)
 library(lubridate)
+library(janitor)
 library(skimr)
 library(plotly)
 library(DT)
@@ -22,9 +26,10 @@ library(parallel)
 colnames <-  c("date", "rented_count", "hour", "temp", "humidity", "windspeed", "visibility", 
                "dew_point", "solar_rad", "rainfall", "snowfall", "season", "holiday", "functional_day")
 
-seoul_bikes_raw_tbl <- read.csv("01-Data/SeoulBikeData.csv", header = F, skip = 1) %>% 
+seoul_bikes_raw_tbl <- read.csv("../data/SeoulBikeData.csv", header = F, skip = 1) %>% 
     as_tibble() %>% 
-    setNames(colnames)
+    setNames(colnames) %>% 
+    clean_names()
 
 
 # * Data Inspection ----
@@ -36,6 +41,18 @@ seoul_bikes_raw_tbl %>% sapply(function(x)sum(is.na(x)))
 
 
 # 2.0: Exploratory Data Analysis ----
+
+# * Function ----
+get_ggplot_custom_theme <- function() {
+
+        theme(
+            plot.title = element_text(size = 18),
+            plot.subtitle = element_text(size = 15),
+            axis.text = element_text(size = 9),
+            axis.title = element_text(size = 9)
+                
+        )
+}
 
 # * Numeric Variables ----
 seoul_bikes_raw_tbl %>% 
@@ -65,66 +82,84 @@ seoul_bikes_tbl <- seoul_bikes_raw_tbl %>%
 # * Overall Distribution of Rented Count ----
 seoul_bikes_tbl %>% 
     ggplot(aes(rented_count))+
-    geom_histogram(color = "white", fill = "grey50", binwidth = 50)+
-    labs(title = "Distribution of Rented Count",
-         x = "Rented Count",
-         y = "Frequency")+
-    theme_bw()
+    geom_histogram(color = "grey30", fill = "#00bfc4", binwidth = 50)+
+    theme_bw()+
+    get_ggplot_custom_theme()
+    labs(
+        title = "Distribution of Rented Count",
+         x    = "Rented Count",
+         y    = "Frequency"
+    )+
+    theme_bw()+
+    get_ggplot_custom_theme()
     
 # * Hourly Distribution of Rented Count ----
 seoul_bikes_tbl %>% 
     mutate(hour = as.factor(hour)) %>% 
     ggplot(aes(hour,rented_count))+
-    geom_boxplot(color = "grey30", fill = "grey80", outlier.colour = "red")+
+    geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
     # scale_x_continuous(limits = c(0, 23), breaks = seq(0, 23, by = 1))+
-    labs(title = "Bike Rentals by Hour of Day",
-         x = "Hour of Day",
-         y = "Rented Count")+
-    theme_bw()
+    theme_bw()+
+    get_ggplot_custom_theme()
+    labs(
+        title = "Bike Rentals by Hour of Day",
+         x    = "Hour of Day",
+         y    = "Rented Count"
+    )
 
 # * Daily Distribution of Rented Count ----
 seoul_bikes_tbl %>% 
     ggplot(aes(day_of_week, rented_count))+
-    geom_boxplot(color = "grey30", fill = "grey80", outlier.colour = "red")+
+    geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
     theme_bw()+
-    labs(title = "Daily Rented Count",
-         subtitle = "More rentals on Mondays, Wednesdays & Fridays",
-         y = "Rented Count",
-         x = "Day of Week")
-
+    get_ggplot_custom_theme()+
+    labs(
+        title    = "Daily Rented Count",
+        subtitle = "More rentals on Mondays, Wednesdays & Fridays",
+        y        = "Rented Count",
+        x        = "Day of Week"
+    )
+    
 
 # * Hourly Rental Distribution by Season ----
 seoul_bikes_tbl %>% 
     mutate(hour = as.factor(hour)) %>% 
-    ggplot(aes(hour,rented_count))+
-    geom_boxplot(color = "grey30", fill = "grey80", outlier.colour = "red")+
-    facet_wrap(~ season, "free")+
-    labs(title = "Bike Rentals by Hour of Day",
-         x = "Hour",
-         y = "Rental Count")+
+    ggplot(aes(hour, rented_count))+
+    geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
+    facet_wrap(~ season, scales = "free")+
     theme_bw()+
-    theme(axis.text = element_text(size = 8))
+    get_ggplot_custom_theme()+
+    labs(
+        title = "Bike Rentals by Hour of Day",
+        x     = "Hour",
+        y     = "Rental Count"
+    )
+  
 
 # * Daily Rental Distribution by Season ----
 seoul_bikes_tbl %>% 
     mutate(hour = as.factor(hour)) %>% 
     ggplot(aes(day_of_week,rented_count))+
-    geom_boxplot(color = "grey30", fill = "grey80", outlier.colour = "red")+
-    facet_wrap(~ season, "free")+
-    labs(title = "Bike Rentals by Hour of Day",
-         x = "Hour",
-         y = "Rental Count")+
+    geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
+    facet_wrap(~ season, scales = "free")+
     theme_bw()+
-    theme(axis.text = element_text(size = 8))
-
-
+    get_ggplot_custom_theme()+
+    labs(
+        title = "Bike Rentals by Hour of Day",
+        x     = "Hour",
+        y     = "Rental Count"
+    )
+    
+  
 # * Rented Count vs Temp / Season ----
 seoul_bikes_tbl %>% 
     ggplot(aes(temp, rented_count, color = season))+
     geom_point(alpha = 0.5)+
     theme_bw()+
+    get_ggplot_custom_theme()+
     labs(title = "Rented Count vs Temp", y = "Rented Count", x = "Temp")
 
+    
 # *  Correlation Matrix ----
 cor_matrix <- seoul_bikes_tbl %>% 
     select_if(is.numeric) %>% 
@@ -135,12 +170,17 @@ cor_matrix <- seoul_bikes_tbl %>%
 cor_matrix %>% 
     ggplot(aes(Var1, Var2, fill = value))+
     geom_tile(color = "white")+
-    scale_fill_gradient2(low = "grey69", high = "grey31", mid = "white",
-                         midpoint = 0, limit = c(-1, 1), space = "lab")+
+    scale_fill_gradient2(
+        low = "#67f8fd", high = "#00898e", mid = "white",
+        midpoint = 0, limit = c(-1, 1), space = "lab"
+    )+
     theme_bw()+
+    get_ggplot_custom_theme()+
     geom_text(aes(label = value))+
-    labs(title = "Correlation Heatmap",
-         subtitle = "", x = "", y = "")+
+    labs(
+        title = "Correlation Heatmap",
+        x = NULL, y = NULL
+    )+
     theme(axis.text.x = element_text(angle = 35, hjust = 1))
 
 
@@ -150,9 +190,10 @@ seoul_bikes_tbl %>%
     select(-rented_count, -hour) %>% 
     gather() %>% 
     ggplot(aes(value))+
-    geom_histogram(color = "white", fill = "grey50")+
-    facet_wrap(~ key, scales = "free")+
-    theme_bw()
+    geom_histogram(color = "white", fill = "#00bfc4")+
+    theme_bw()+
+    get_ggplot_custom_theme()+
+    facet_wrap(~ key, scales = "free")
     
     
 

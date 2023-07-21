@@ -17,6 +17,7 @@ library(janitor)
 library(skimr)
 library(plotly)
 library(DT)
+library(kableExtra)
 library(tidymodels)
 library(rules)
 library(vip)
@@ -392,7 +393,7 @@ write_rds(tune_results_cubist_1, file = "../artifacts/tune_results_cubist_1.rds"
 # * 4.4: Training Results Metrics Comparison ----
 
 # Function To Get Model Model Metrics
-func_get_best_metric <- function(model, model_name){
+get_best_metric <- function(model, model_name){
     
     bind_rows(
         model %>% show_best("mae", 1),
@@ -406,9 +407,9 @@ func_get_best_metric <- function(model, model_name){
         select(model, everything(.))
 }
 
-ranger_metrics_1 <- func_get_best_metric(ranger_tune_results_1, "Random Forest")
-xgboost_metrics_1 <- func_get_best_metric(xgboost_tune_results_1, "XGBOOST")
-cubist_metrics_1 <- func_get_best_metric(cubist_tune_results_1, "Cubist")
+ranger_metrics_1  <- get_best_metric(tune_results_ranger_1, "Random Forest")
+xgboost_metrics_1 <- get_best_metric(tune_results_xgboost_1, "Xgboost")
+cubist_metrics_1  <- get_best_metric(tune_results_cubist_1, "Cubist")
 
 # Training Set Metrics Table
 training_metrics_1 <- bind_rows(
@@ -417,38 +418,40 @@ training_metrics_1 <- bind_rows(
     cubist_metrics_1
 ) %>% 
     arrange(rmse) %>% 
-    datatable(
-        class = "cell-border stripe",
-        caption = "Training Set Metrics Round 1",
-        options = list(
-            dom = "t"
-        )
-        
-    )
+    kable("html", table.attr = "style='width: 800px;'") %>%
+    kable_styling(full_width = FALSE) %>% 
+    column_spec(1, width = "270px")
+    
 
 training_metrics_1
 
 
+# ******************************************************************************
+# **** ----
 # 5.0: Hyper-Parameter Tuning Round 2 ----
+# ******************************************************************************
 
 # * XGBOOST Tuning Round 2 ----
 
 # Visualize XGBOOST Tuning Params
-p <- xgboost_tune_results_1 %>% 
+p <- tune_results_xgboost_1 %>% 
     autoplot()+
     theme_bw()+
+    get_ggplot_custom_theme()+
     labs(title = "XGBOOST Tuning Parameters")
 
-ggplotly(p) 
+p
 
 
 # Updated XGBOOST Grid 
 set.seed(123)
 grid_spec_xgboost_round_2 <- grid_latin_hypercube(
-    parameters(xgboost_spec) %>% 
+    parameters(model_spec_xgboost) %>% 
         update(
-            trees = trees(range = c(1280, 1965)),
-            learn_rate = learn_rate(range = c(-2.45, -1.45))),
+            trees = trees(range = c(1000, 2000)),
+            learn_rate = learn_rate(range = c(-2.0, -1.0)),
+            min_n = min_n(range = c(20, 30))
+        ),
     size = 15
 )
 
@@ -456,7 +459,7 @@ grid_spec_xgboost_round_2 <- grid_latin_hypercube(
 tic()
 set.seed(654)
 xgboost_tune_results_2 <- tune_grid(
-    object    = xgboost_workflow, 
+    object    = wflw_xgboost, 
     resamples = resamples_obj,
     grid      = grid_spec_xgboost_round_2,
     control   = control_grid(save_pred = TRUE, verbose = FALSE, allow_par = TRUE),
@@ -468,26 +471,27 @@ toc()
 xgboost_tune_results_2 %>% show_best("rmse", n = 5)
 
 # Save Model For Future Use
-write_rds(xgboost_tune_results_2, file = "02-Models/xgboost_tune_results_2.rds")
+write_rds(xgboost_tune_results_2, file = "../artifacts/xgboost_tune_results_2.rds")
 
 
 # * 5.2: Cubist Tuning Round 2 ----
 
 # Visualize Cubist Tuning Params
-p <- cubist_tune_results_1 %>% 
+p <- tune_results_cubist_1 %>% 
     autoplot()+
     theme_bw()+
+    get_ggplot_custom_theme()+
     labs(title = "Cubist Tuning Parameters")
 
-ggplotly(p) 
+p
 
 # Updated Cubist Grid 
 set.seed(123)
 grid_spec_cubist_round_2 <- grid_latin_hypercube(
     parameters(cubist_spec) %>% 
         update(
-            committees = committees(range = c(15, 98)),
-            neighbors = neighbors(range = c(2, 7))),
+            committees = committees(range = c(75, 100)),
+            neighbors = neighbors(range = c(1.8, 3.0))),
     size = 15
 )
 

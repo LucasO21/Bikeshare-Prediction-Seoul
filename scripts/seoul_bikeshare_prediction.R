@@ -347,8 +347,10 @@ wflw_cubist <-
     add_recipe(recipe_spec_cubist) %>% 
     add_model(model_spec_cubist) 
 
-
+# ******************************************************************************
+# **** ----
 # 4.0: Hyper-Parameter Tuning Round 1 ----
+# ******************************************************************************
 
 # 4.1: Setup Parallel Processing ----
 registerDoFuture()
@@ -482,7 +484,7 @@ p <- tune_results_xgboost_1 %>%
     autoplot()+
     theme_bw()+
     get_ggplot_custom_theme()+
-    labs(title = "XGBOOST Tuning Parameters")
+    labs(title = "XGBOOST Tuning Parameters vs Accuracy Metrics")
 
 p
 

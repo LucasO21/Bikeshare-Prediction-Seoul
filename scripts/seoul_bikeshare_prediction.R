@@ -589,7 +589,7 @@ training_metrics_2
 
 # ******************************************************************************
 # **** ----
-# 6.0:  6.0: Finalize Models ----
+# 6.0:  Finalize Models ----
 # ******************************************************************************
 
 # 6.1: Xgboost Final Fit ----
@@ -660,7 +660,7 @@ test_set_metrics <- bind_rows(
 
 # ******************************************************************************
 # **** ----
-# 7.0: MAKING PREDICTIONS ----
+# 7.0: Making Predictions ----
 # ******************************************************************************
 
 # To make predictions, we'll use the model offering the best rmse which is the
@@ -718,4 +718,26 @@ vip_plot <- vip(finalized_model_xgboost)+
   labs(title = "XGBOOST Model Variable Importance")
 
 ggsave("../plots/vip_plog.png", plot = vip_plot, width = 6, height = 4, dpi = 300)
+
+
+# ******************************************************************************
+# **** ----
+# 9.0: Session Info ----
+# ******************************************************************************
+
+# Get a list of packages and versions in the current R session
+package_info <- sessionInfo()$otherPkgs
+
+# Extract package names and versions
+package_list <- data.frame(
+  Package = names(package_info),
+  Version = sapply(package_info, function(x) x[["Version"]]),
+  stringsAsFactors = FALSE
+)
+
+# Display the package list
+print(package_list)
+
+
+
 

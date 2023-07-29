@@ -12,7 +12,7 @@ models presented in [this](https://www.tandfonline.com/doi/full/10.1080/22797254
 After conducting 2 rounds of hyper-parameter tuning, the XGBOOST model outperformed 
 all other models, including the best-performing model in the research paper, in terms of RMSE.
 The developed model achieved a lower RMSE, indicating improved prediction accuracy. Read 
-full analysis write up on Medium. 
+full analysis write up on [Medium](https://clfo2014.medium.com/predicting-hourly-bike-rentals-8eed64dd1d). 
 
 
 ## Data Source 

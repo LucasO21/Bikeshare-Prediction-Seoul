@@ -384,10 +384,20 @@ tune_results_cubist_1 %>% show_best("rmse", n = 5)
 # Save Model For Future Use
 write_rds(tune_results_cubist_1, file = "../artifacts/tune_results_cubist_1.rds")
 
-# Loading Saved Models
-# ranger_tune_results_1 <- read_rds("02-Models/ranger_tune_results_1.rds")
-# xgboost_tune_results_1 <- read_rds("02-Models/xgboost_tune_results_1.rds")
-# cubist_tune_results_1 <- read_rds("02-Models/cubist_tune_results_1.rds")
+
+# ******************************************************************************
+# Reloading Saved Models
+
+## Notice that each model was saved to an "artifacts" folder as a .rds object
+## This is to be able to reload and reuse the models in the future
+## In this section, I'm just reloading the saved models
+
+# Loading Saved Models ----
+tune_results_ranger_1  <- read_rds("../artifacts/tune_results_ranger_1.rds")
+tune_results_xgboost_1 <- read_rds("../artifacts/tune_results_xgboost_1.rds")
+tune_results_cubist_1  <- read_rds("../artifacts/tune_results_cubist_1.rds")
+
+# ******************************************************************************
 
 
 # * 4.4: Training Results Metrics Comparison ----
@@ -488,10 +498,10 @@ p
 # Updated Cubist Grid 
 set.seed(123)
 grid_spec_cubist_round_2 <- grid_latin_hypercube(
-    parameters(cubist_spec) %>% 
+    parameters(model_spec_cubist) %>% 
         update(
             committees = committees(range = c(75, 100)),
-            neighbors = neighbors(range = c(1.8, 3.0))),
+            neighbors = neighbors(range = c(1, 3))),
     size = 15
 )
 
@@ -499,7 +509,7 @@ grid_spec_cubist_round_2 <- grid_latin_hypercube(
 tic()
 set.seed(654)
 cubist_tune_results_2 <- tune_grid(
-    object    = cubist_workflow, 
+    object    = wflw_cubist, 
     resamples = resamples_obj,
     grid      = grid_spec_cubist_round_2,
     control   = control_grid(save_pred = TRUE, verbose = FALSE, allow_par = TRUE),

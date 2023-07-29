@@ -49,32 +49,46 @@ seoul_bikes_raw_tbl %>% sapply(function(x)sum(is.na(x)))
 # 2.0: Exploratory Data Analysis ----
 # ******************************************************************************
 
-# * Function ----
-get_ggplot_custom_theme <- function() {
+# Function
+# get_ggplot_custom_theme - function to customize axis of ggplots.
+# save_ggplot - a function to save the plots created in EDA to a folder.
+get_ggplot_custom_theme <- function(plot_title = 15, plot_subtitle = 13, 
+                                    axis_text_size = 9, axis_title_size = 9) {
 
         theme(
-            plot.title = element_text(size = 18),
-            plot.subtitle = element_text(size = 15),
-            axis.text = element_text(size = 9),
-            axis.title = element_text(size = 9)
+            plot.title = element_text(size = plot_title),
+            plot.subtitle = element_text(size = plot_subtitle),
+            axis.text = element_text(size = axis_text_size),
+            axis.title = element_text(size = axis_title_size)
                 
         )
 }
 
-# * Numeric Variables ----
+save_ggplot <- function(plot_name, height = 3.5, width = 6, dpi = 300) {
+  
+  ggsave(
+    filename = str_glue("../plots/{plot_name}.png"),
+    height   = height,
+    width    = width,
+    dpi      = dpi
+  )
+}
+
+# 2.1: Numeric Variables ----
 seoul_bikes_raw_tbl %>% 
     select_if(is.numeric) %>% 
     head()
 
-# * Categorical Variables ----
+# 2.2: Categorical Variables ----
 seoul_bikes_raw_tbl %>% 
     select_if(is.character) %>% 
     head()
 
-# * Skim ----
+# 2.3: Skim ----
 skim(seoul_bikes_raw_tbl)
 
-# * Format Data ----
+
+# 2.4: Format Data ----
 seoul_bikes_tbl <- seoul_bikes_raw_tbl %>% 
     
     # # add date features
@@ -86,88 +100,101 @@ seoul_bikes_tbl <- seoul_bikes_raw_tbl %>%
     # filter function_day = "yes"
     filter(functional_day == "Yes")
     
-# * Overall Distribution of Rented Count ----
+
+# 2.5: Overall Distribution of Rented Count ----
 seoul_bikes_tbl %>% 
     ggplot(aes(rented_count))+
     geom_histogram(color = "grey30", fill = "#00bfc4", binwidth = 50)+
     theme_bw()+
-    get_ggplot_custom_theme()
+    get_ggplot_custom_theme()+
     labs(
         title = "Distribution of Rented Count",
          x    = "Rented Count",
          y    = "Frequency"
-    )+
-    theme_bw()+
-    get_ggplot_custom_theme()
+    )
+
+save_ggplot("histogram_rented_count", dpi = 150)
     
-# * Hourly Distribution of Rented Count ----
+
+# 2.6: Hourly Distribution of Rented Count ----
 seoul_bikes_tbl %>% 
     mutate(hour = as.factor(hour)) %>% 
     ggplot(aes(hour,rented_count))+
     geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
     # scale_x_continuous(limits = c(0, 23), breaks = seq(0, 23, by = 1))+
     theme_bw()+
-    get_ggplot_custom_theme()
+    get_ggplot_custom_theme()+
     labs(
         title = "Bike Rentals by Hour of Day",
          x    = "Hour of Day",
          y    = "Rented Count"
     )
 
-# * Daily Distribution of Rented Count ----
-seoul_bikes_tbl %>% 
-    ggplot(aes(day_of_week, rented_count))+
-    geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
-    theme_bw()+
-    get_ggplot_custom_theme()+
-    labs(
-        title    = "Daily Rented Count",
-        subtitle = "More rentals on Mondays, Wednesdays & Fridays",
-        y        = "Rented Count",
-        x        = "Day of Week"
-    )
-    
+save_ggplot("boxplot_rented_count_by_hour", dpi = 150)
 
-# * Hourly Rental Distribution by Season ----
+
+# 2.7: Daily Distribution of Rented Count ----
+seoul_bikes_tbl %>% 
+  ggplot(aes(day_of_week, rented_count))+
+  geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
+  theme_bw()+
+  get_ggplot_custom_theme()+
+  labs(
+      title    = "Daily Rented Count",
+      subtitle = "More rentals on Mondays, Wednesdays & Fridays",
+      y        = "Rented Count",
+      x        = "Day of Week"
+  )
+
+save_ggplot("boxplot_rented_count_by_day", dpi = 150)
+
+
+# 2.8: Hourly Rental Distribution by Season ----
 seoul_bikes_tbl %>% 
     mutate(hour = as.factor(hour)) %>% 
     ggplot(aes(hour, rented_count))+
     geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
     facet_wrap(~ season, scales = "free")+
     theme_bw()+
-    get_ggplot_custom_theme()+
+    get_ggplot_custom_theme(axis_text_size = 9)+
     labs(
         title = "Bike Rentals by Hour of Day",
         x     = "Hour",
         y     = "Rental Count"
     )
+
+save_ggplot("boxplot_rented_count_by_hour_and_season", dpi = 200)
   
 
-# * Daily Rental Distribution by Season ----
+# 2.9: Daily Rental Distribution by Season ----
 seoul_bikes_tbl %>% 
-    mutate(hour = as.factor(hour)) %>% 
-    ggplot(aes(day_of_week,rented_count))+
-    geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
-    facet_wrap(~ season, scales = "free")+
-    theme_bw()+
-    get_ggplot_custom_theme()+
-    labs(
-        title = "Bike Rentals by Hour of Day",
-        x     = "Hour",
-        y     = "Rental Count"
-    )
-    
+  mutate(hour = as.factor(hour)) %>% 
+  ggplot(aes(day_of_week,rented_count))+
+  geom_boxplot(color = "grey30", fill = "#00bfc4", outlier.colour = "red")+
+  facet_wrap(~ season, scales = "free")+
+  theme_bw()+
+  get_ggplot_custom_theme()+
+  labs(
+      title = "Bike Rentals by Hour of Day & Season",
+      x     = "Hour",
+      y     = "Rental Count"
+  )
+
+save_ggplot("boxplot_rented_count_by_hour_and_season", dpi = 200)
   
-# * Rented Count vs Temp / Season ----
+
+# 2.10 Rented Count vs Temp / Season ----
 seoul_bikes_tbl %>% 
-    ggplot(aes(temp, rented_count, color = season))+
-    geom_point(alpha = 0.5)+
-    theme_bw()+
-    get_ggplot_custom_theme()+
-    labs(title = "Rented Count vs Temp", y = "Rented Count", x = "Temp")
+  ggplot(aes(temp, rented_count, color = season))+
+  geom_point(alpha = 0.5)+
+  theme_bw()+
+  get_ggplot_custom_theme()+
+  labs(title = "Rented Count vs Temp", y = "Rented Count", x = "Temp")
+
+save_ggplot("scatter_plot_temp_vs_rented_count", dpi = 150)
 
     
-# *  Correlation Matrix ----
+# 2.11 Correlation Matrix ----
 cor_matrix <- seoul_bikes_tbl %>% 
     select_if(is.numeric) %>% 
     cor() %>% 
@@ -190,6 +217,12 @@ cor_matrix %>%
     )+
     theme(axis.text.x = element_text(angle = 35, hjust = 1))
 
+save_ggplot("correlation_heatmap", dpi = 150)
+
+showtext_auto()
+showtext_opts(dpi = 100)
+
+
 
 # * Distribution of Other Numeric Weather Features ----
 seoul_bikes_tbl %>% 
@@ -208,19 +241,19 @@ seoul_bikes_tbl %>%
 # 3.0: Modeling ----
 # ******************************************************************************
 
-# * 3.1: Data Splitting ----
+# 3.1: Data Splitting ----
 set.seed(100)
 split_obj <- initial_split(seoul_bikes_tbl, prop = 0.80, strata = rented_count)
 
 train_tbl <- training(split_obj)
 test_tbl  <- testing(split_obj)
 
-# * 3.2: Cross Validation Specs ----
+# 3.2: Cross Validation Specs ----
 set.seed(101)
 resamples_obj <- vfold_cv(seoul_bikes_tbl, v = 10)
 
 
-# * 3.3: Recipes ----
+# 3.3: Recipes ----
 
 # Random Forest Recipe Spec
 recipe_spec_ranger <- recipe(rented_count ~ ., data = train_tbl) %>% 
@@ -263,7 +296,7 @@ recipe_spec_cubist <- recipe(formula = rented_count ~ ., data = seoul_bikes_tbl)
 recipe_spec_cubist %>% prep() %>% juice() %>% glimpse()
 
 
-# * 3.4: Model Specs ----
+# 3.4: Model Specs ----
 
 # Random Forest Model Spec
 model_spec_ranger <- rand_forest(
@@ -294,7 +327,7 @@ model_spec_cubist <- cubist_rules(
     set_engine("Cubist") 
 
 
-# * 3.1: Workflows ----
+# 3.1: Workflows ----
 
 # Random Forest Workflow
 wflw_ranger <- 
@@ -317,12 +350,12 @@ wflw_cubist <-
 
 # 4.0: Hyper-Parameter Tuning Round 1 ----
 
-# * 4.1: Setup Parallel Processing ----
+# 4.1: Setup Parallel Processing ----
 registerDoFuture()
 n_cores <- detectCores()
 plan(strategy = cluster, workers = makeCluster(n_cores))
 
-# * 4.2: Random Forest Tuning ----
+# 4.2: Random Forest Tuning ----
 tic()
 set.seed(123)
 tune_results_ranger_1 <- tune_grid(
@@ -344,7 +377,7 @@ tune_results_ranger_1 %>% show_best("mae", n = 5)
 write_rds(tune_results_ranger_1, file = "../artifacts/tune_results_ranger_1.rds")
 
 
-# * 4.3: Xgboost Tuning Round 1----
+# 4.3: Xgboost Tuning Round 1----
 tic()
 set.seed(456)
 tune_results_xgboost_1 <- tune_grid(
@@ -364,7 +397,7 @@ tune_results_xgboost_1 %>% show_best("rmse", n = 5)
 write_rds(tune_results_xgboost_1, file = "../artifacts/tune_results_xgboost_1.rds")
 
 
-# * 4.3: Cubist Tuning Round 1 ----
+# 4.3: Cubist Tuning Round 1 ----
 tic()
 set.seed(456)
 tune_results_cubist_1 <- tune_grid(
@@ -401,7 +434,7 @@ tune_results_cubist_1  <- read_rds("../artifacts/tune_results_cubist_1.rds")
 # ******************************************************************************
 
 
-# * 4.4: Training Results Metrics Comparison ----
+# 4.4: Training Results Metrics Comparison ----
 
 # Function To Get Model Model Metrics
 get_best_metric <- function(model, model_name){
@@ -539,7 +572,7 @@ write_rds(cubist_tune_results_2, file = "../artifacts/tune_results_cubist_2.rds"
 
 # ******************************************************************************
 
-# * 5.3 Training Results Metrics Comparison Round 2 ----
+# 5.3: Training Results Metrics Comparison Round 2 ----
 training_metrics_2 <- bind_rows(
   get_best_metric(tune_results_xgboost_2, "Xgboost"),
   get_best_metric(tune_results_cubist_2, "Cubist"),
@@ -581,7 +614,7 @@ cubist_last_fit <- workflow() %>%
     add_recipe(recipe_spec_cubist) %>% 
     last_fit(split_obj, metric_set(mae, rmse, rsq))
 
-# 6.2.1: Cubist Final Fit (Test Set) Metrics
+# 6.2.1: Test Set Metrics ----
 collect_metrics(cubist_last_fit)
 
 
@@ -633,7 +666,7 @@ test_set_metrics <- bind_rows(
 # 1) Train the model on the entire dataset
 # 2) Predict on future data
 
-# * 7.1: Train Model on Entire Data ----
+# 7.1: Train Model on Entire Data ----
 finalized_model_xgboost <- model_spec_final_xgboost %>% 
     fit(
       rented_count ~ ., 
@@ -643,7 +676,7 @@ finalized_model_xgboost <- model_spec_final_xgboost %>%
 # Save Finalized Model
 finalized_model_xgboost %>% write_rds("../artifacts/finalized_model_xgboost.rds")
 
-# * 7.2: Create Sample New Data For Prediction ----
+# 7.2: Create Sample New Data For Prediction ----
 sample_data_tbl <- tibble(
         date           = ymd("2019-01-24"),
         hour           = 6,

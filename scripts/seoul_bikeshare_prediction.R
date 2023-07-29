@@ -388,11 +388,12 @@ write_rds(tune_results_cubist_1, file = "../artifacts/tune_results_cubist_1.rds"
 # ******************************************************************************
 # Reloading Saved Models
 
-## Notice that each model was saved to an "artifacts" folder as a .rds object
-## This is to be able to reload and reuse the models in the future
-## In this section, I'm just reloading the saved models
+## This section is necessary if you have to close your project and resume later.
+## Notice that each model was saved to an "artifacts" folder as a .rds object.
+## This is to be able to reload and reuse the models in the future.
+## In this section, I'm just reloading the saved models.
 
-# Loading Saved Models ----
+# Loading Saved Models
 tune_results_ranger_1  <- read_rds("../artifacts/tune_results_ranger_1.rds")
 tune_results_xgboost_1 <- read_rds("../artifacts/tune_results_xgboost_1.rds")
 tune_results_cubist_1  <- read_rds("../artifacts/tune_results_cubist_1.rds")
@@ -441,9 +442,9 @@ training_metrics_1
 # 5.0: Hyper-Parameter Tuning Round 2 ----
 # ******************************************************************************
 
-# * XGBOOST Tuning Round 2 ----
+# 5.1: XGBOOST Tuning Round 2 ----
 
-# Visualize XGBOOST Tuning Params
+# 5.1.1: Visualize XGBOOST Tuning Params ----
 p <- tune_results_xgboost_1 %>% 
     autoplot()+
     theme_bw()+
@@ -453,7 +454,7 @@ p <- tune_results_xgboost_1 %>%
 p
 
 
-# Updated XGBOOST Grid 
+# 5.1.2: Updated XGBOOST Grid ----
 set.seed(123)
 grid_spec_xgboost_round_2 <- grid_latin_hypercube(
     parameters(model_spec_xgboost) %>% 
@@ -465,7 +466,7 @@ grid_spec_xgboost_round_2 <- grid_latin_hypercube(
     size = 15
 )
 
-# Tuning Round 2
+# 5.1.3: Tuning Round 2 ----
 tic()
 set.seed(654)
 xgboost_tune_results_2 <- tune_grid(
@@ -477,16 +478,16 @@ xgboost_tune_results_2 <- tune_grid(
 )
 toc()
 
-# * 5.1: Xgboost Round 2 Results ----
+# 5.1.4: Xgboost Round 2 Results ----
 xgboost_tune_results_2 %>% show_best("rmse", n = 5)
 
 # Save Model For Future Use
-write_rds(xgboost_tune_results_2, file = "../artifacts/xgboost_tune_results_2.rds")
+write_rds(xgboost_tune_results_2, file = "../artifacts/tune_results_xgboost_2.rds")
 
 
-# * 5.2: Cubist Tuning Round 2 ----
+# 5.2: Cubist Tuning Round 2 ----
 
-# Visualize Cubist Tuning Params
+# 5.2.1: Visualize Cubist Tuning Params
 p <- tune_results_cubist_1 %>% 
     autoplot()+
     theme_bw()+
@@ -495,17 +496,17 @@ p <- tune_results_cubist_1 %>%
 
 p
 
-# Updated Cubist Grid 
+# 5.2.2: Updated Cubist Grid ----
 set.seed(123)
 grid_spec_cubist_round_2 <- grid_latin_hypercube(
     parameters(model_spec_cubist) %>% 
         update(
             committees = committees(range = c(75, 100)),
             neighbors = neighbors(range = c(1, 3))),
-    size = 15
+    size = 10
 )
 
-# Tuning Round 2
+# 5.2.3: Tuning Round 2 ----
 tic()
 set.seed(654)
 cubist_tune_results_2 <- tune_grid(
@@ -517,35 +518,36 @@ cubist_tune_results_2 <- tune_grid(
 )
 toc()
 
-# Cubist Round 2 Results
-cubist_tune_results_2 %>% show_best("mae", n = 5)
+# 5.2.4: Cubist Round 2 Results ----
+cubist_tune_results_2 %>% show_best("rmse", n = 5)
 
 # Save Model For Future Use
-write_rds(cubist_tune_results_2, file = "02-Models/cubist_tune_results_2rds")
+write_rds(cubist_tune_results_2, file = "../artifacts/tune_results_cubist_2.rds")
 
+
+# ******************************************************************************
+# Reloading Saved Models
+
+## This section is necessary if you have to close your project and resume later.
+## Notice that each model was saved to an "artifacts" folder as a .rds object.
+## This is to be able to reload and reuse the models in the future.
+## In this section, I'm just reloading the saved models.
 
 # Loading Saved Models
-# xgboost_tune_results_2 <- read_rds("02-Models/xgboost_tune_results_2.rds")
-# cubist_tune_results_2 <- read_rds("02-Models/cubist_tune_results_2rds")
+# tune_results_xgboost_2 <- read_rds("../artifacts/tune_results_xgboost_2.rds")
+# tune_results_cubist_2  <- read_rds("../artifacts/tune_results_cubist_2.rds")
+
+# ******************************************************************************
 
 # * 5.3 Training Results Metrics Comparison Round 2 ----
-xgboost_metrics_2 <- func_get_best_metric(xgboost_tune_results_2, "XGBOOST")
-cubist_metrics_2 <- func_get_best_metric(cubist_tune_results_2, "Cubist")
-
-# Training Set Metrics Table
 training_metrics_2 <- bind_rows(
-    xgboost_metrics_2,
-    cubist_metrics_2,
+  get_best_metric(tune_results_xgboost_2, "Xgboost"),
+  get_best_metric(tune_results_cubist_2, "Cubist"),
 ) %>% 
     arrange(rmse) %>% 
-    datatable(
-        class = "cell-border stripe",
-        caption = "Training Set Metrics Round 2",
-        options = list(
-            dom = "t"
-        )
-        
-    )
+  kable("html", table.attr = "style='width: 800px;'") %>%
+  kable_styling(full_width = FALSE) %>% 
+  column_spec(1, width = "270px")
 
 training_metrics_2
 

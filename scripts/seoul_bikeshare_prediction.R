@@ -544,7 +544,7 @@ training_metrics_2 <- bind_rows(
   get_best_metric(tune_results_xgboost_2, "Xgboost"),
   get_best_metric(tune_results_cubist_2, "Cubist"),
 ) %>% 
-    arrange(rmse) %>% 
+  arrange(rmse) %>% 
   kable("html", table.attr = "style='width: 800px;'") %>%
   kable_styling(full_width = FALSE) %>% 
   column_spec(1, width = "270px")
@@ -552,51 +552,54 @@ training_metrics_2 <- bind_rows(
 training_metrics_2
 
 
+# ******************************************************************************
+# **** ----
+# 6.0:  6.0: Finalize Models ----
+# ******************************************************************************
 
-
-# 6.0: Finalize Models ----
-
-# * XGBOOST Final Fit ----
-xgboost_spec_final <- xgboost_spec %>% 
-    finalize_model(parameters = xgboost_tune_results_2 %>% select_best("rmse"))
+# 6.1: Xgboost Final Fit ----
+model_spec_final_xgboost <- model_spec_xgboost %>% 
+    finalize_model(parameters = tune_results_xgboost_2 %>% select_best("rmse"))
 
 set.seed(123)
 xgboost_last_fit <- workflow() %>% 
-    add_model(xgboost_spec_final) %>% 
-    add_recipe(xgboost_recipe) %>% 
+    add_model(model_spec_final_xgboost) %>% 
+    add_recipe(recipe_spec_xgboost) %>% 
     last_fit(split_obj, metric_set(mae, rmse, rsq))
 
-# XGBOOST Final Fit (Test Set) Metrics
+# 6.1.1: Test Set Metrics ----
 collect_metrics(xgboost_last_fit)
 
 
-# * Cubist Final Fit ----
-cubist_spec_final <- cubist_spec %>% 
-    finalize_model(parameters = cubist_tune_results_2 %>% select_best("rmse"))
+# 6.2: Cubist Final Fit ----
+model_spec_final_cubist <- model_spec_cubist %>% 
+    finalize_model(parameters = tune_results_cubist_2 %>% select_best("rmse"))
 
 set.seed(123)
 cubist_last_fit <- workflow() %>% 
-    add_model(cubist_spec_final) %>% 
-    add_recipe(cubist_recipe) %>% 
+    add_model(model_spec_final_cubist) %>% 
+    add_recipe(recipe_spec_cubist) %>% 
     last_fit(split_obj, metric_set(mae, rmse, rsq))
 
-# Cubist Final Fit (Test Set) Metrics
+# 6.2.1: Cubist Final Fit (Test Set) Metrics
 collect_metrics(cubist_last_fit)
 
-# 6.1: Test Results Metrics Comparison ----
 
-# Final Fit (Test) Set Metrics Set (XGBOOST)
+# 6.2: Test Results Metrics Comparison ----
+
+# Final Fit (Test) Set Metrics Set (Xgboost)
 xgboost_test_metrics <- collect_metrics(xgboost_last_fit) %>% 
-    select(-.config) %>% 
-    bind_rows(
-        xgboost_last_fit %>% 
-            collect_predictions() %>% 
-            mae(rented_count, .pred) 
-    ) %>% 
-    select(-.estimator) %>% 
-    mutate(model = "XGBOOST") %>% 
-    arrange(.estimate)
-
+  select(-.config) %>% 
+  bind_rows(
+      xgboost_last_fit %>% 
+          collect_predictions() %>% 
+          mae(rented_count, .pred) 
+  ) %>% 
+  select(-.estimator) %>% 
+  pivot_wider(names_from = .metric, values_from = .estimate) %>% 
+  mutate(model = "Xgboost", .before = rmse) 
+  
+  
 # Final Fit (Test) Set Metrics Set (Cubist)
 cubist_test_metrics <- collect_metrics(cubist_last_fit) %>% 
     select(-.config) %>% 
@@ -606,72 +609,78 @@ cubist_test_metrics <- collect_metrics(cubist_last_fit) %>%
             mae(rented_count, .pred) 
     ) %>% 
     select(-.estimator) %>% 
-    mutate(model = "Cubist") %>% 
-    arrange(.estimate)
+  pivot_wider(names_from = .metric, values_from = .estimate) %>% 
+  mutate(model = "Cubist", .before = rmse) 
 
 # Final Fit (Test) Set Metrics Table
 test_set_metrics <- bind_rows(
     xgboost_test_metrics,
     cubist_test_metrics
 ) %>% 
-    mutate(.estimate = round(.estimate, 2)) %>% 
-    spread(key = .metric, value = .estimate) %>% 
-    arrange(mae) %>% 
-    datatable(
-        class = "cell-border stripe",
-        caption = "Test Set Metrics",
-        options = list(
-            dom = "t"
-        )
-        
-    )
+  arrange(rmse) %>% 
+  kable("html", table.attr = "style='width: 800px;'") %>%
+  kable_styling(full_width = FALSE) %>% 
+  column_spec(1, width = "270px")
 
 
-# 7.0: Making Predictions ----
+# ******************************************************************************
+# **** ----
+# 7.0: MAKING PREDICTIONS ----
+# ******************************************************************************
 
-#* To make predictions, we'll use the model offering the best rmse which is the
-#* XGBOOST. We'll need to -
-#* 1) Train the model on the entire dataset
-#* 2) Predict on future data
+# To make predictions, we'll use the model offering the best rmse which is the
+# XGBOOST. We'll need to -
+# 1) Train the model on the entire dataset
+# 2) Predict on future data
 
 # * 7.1: Train Model on Entire Data ----
-xgboost_model <- xgboost_spec_final %>% 
-    fit(rented_count ~ ., data = xgboost_recipe %>% prep %>% bake(new_data = seoul_bikes_tbl))
-
-# * 7.2: Create Sample New Data For Prediction ----
-sample_data <- 
-    tibble(
-        date = ymd("2019-01-24"),
-        hour = 6,
-        temp = 6,
-        humidity = 80, 
-        windspeed = 1.8,
-        visibility = 1400,
-        dew_point = -6.0,
-        solar_rad = 0.00,
-        rainfall = 0.0,
-        snowfall = 0.0,
-        season = "Autumn",
-        holiday = "No Holiday",
-        functional_day = "Yes",
-        day_of_week = wday(date, label = TRUE),
-        month = month(date, label = TRUE)
+finalized_model_xgboost <- model_spec_final_xgboost %>% 
+    fit(
+      rented_count ~ ., 
+      data = recipe_spec_xgboost %>% prep %>% bake(new_data = seoul_bikes_tbl)
     )
 
-sample_data <- sample_data %>% 
-    mutate_if(is.character, as.factor)
+# Save Finalized Model
+finalized_model_xgboost %>% write_rds("../artifacts/finalized_model_xgboost.rds")
 
-sample_data
+# * 7.2: Create Sample New Data For Prediction ----
+sample_data_tbl <- tibble(
+        date           = ymd("2019-01-24"),
+        hour           = 6,
+        temp           = 6,
+        humidity       = 80, 
+        windspeed      = 1.8,
+        visibility     = 1400,
+        dew_point      = -6.0,
+        solar_rad      = 0.00,
+        rainfall       = 0.0,
+        snowfall       = 0.0,
+        season         = "Autumn",
+        holiday        = "No Holiday",
+        functional_day = "Yes",
+        day_of_week    = wday(date, label = TRUE),
+        month          = month(date, label = TRUE)
+    ) %>% 
+  mutate_if(is.character, as.factor)
 
-# 7.3: Predictions
-xgboost_recipe %>% 
+
+# 7.3: Predictions ----
+recipe_spec_xgboost %>% 
     prep() %>% 
-    bake(new_data = sample_data) %>% 
-    predict(xgboost_model, new_data = .)
+    bake(new_data = sample_data_tbl) %>% 
+    predict(finalized_model_xgboost, new_data = .)
 
+
+# ******************************************************************************
+# **** ----
 # 8.0: Variable Importance ----
-vip_plot <- vip(xgboost_model)+
-    theme_bw()+
-    labs(title = "XGBOOST Model Variable Importance")
+# ******************************************************************************
 
-vip_plot
+# 8.1: Xgboost VIP Plot ----
+vip_plot <- vip(finalized_model_xgboost)+
+  theme_bw()+
+  get_ggplot_custom_theme()+
+  labs(title = "XGBOOST Model Variable Importance")
+
+ggsave("../plots/vip_plog.png", plot = vip_plot, width = 6, height = 4, dpi = 300)
+
